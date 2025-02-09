@@ -2,3 +2,5 @@
 /data
 .DS_Store
 /notebooks/catboost_info
+/backpack_predictor/__pycache__
+/backpack_predictor.egg-info
