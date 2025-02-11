@@ -36,13 +36,14 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
         df = df.drop(columns='id')
     
     # Define the mapping for Size conversion
-    size_mapping = {"Small": 1, "Medium": 2, "Large": 3}
-    df["size_int"] = df["size"].map(size_mapping).fillna(0).astype(int)
+    size_mapping = {"Small": 0, "Medium": 1, "Large": 2}
+    # df["size_int"] = df["size"].map(size_mapping).fillna(0).astype(int)
+    df["size"] = df["size"].map(size_mapping).fillna(-1)
     
     # Handle weight capacity
     df['weight_capacity'] = df['weight_capacity'].fillna(0)
-    df['weight_capacity_int'] = df['weight_capacity'].astype(int)
-    df['weight_capacity_size'] = df['weight_capacity'] * df['size_int']
+    # df['weight_capacity_int'] = df['weight_capacity'].astype(int)
+    # df['weight_capacity_size'] = df['weight_capacity'] * df['size_int']
     
     # Convert categorical columns
     df['compartments'] = df['compartments'].astype('category')
@@ -56,30 +57,30 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
     return df
 
 
-def preprocess_weight_capacity(train_df, test_df, n_bins=5, target=target):
-    """
-    Function to bin 'weight_capacity' and apply Target Encoding based on the target column.
+# def preprocess_weight_capacity(train_df, test_df, n_bins=5, target=target):
+#     """
+#     Function to bin 'weight_capacity' and apply Target Encoding based on the target column.
     
-    Parameters:
-    train_df (pd.DataFrame): Training dataframe containing 'weight_capacity'.
-    test_df (pd.DataFrame): Test dataframe containing 'weight_capacity'.
-    target_column (str): Target variable for encoding.
-    n_bins (int): Number of bins for discretization.
+#     Parameters:
+#     train_df (pd.DataFrame): Training dataframe containing 'weight_capacity'.
+#     test_df (pd.DataFrame): Test dataframe containing 'weight_capacity'.
+#     target_column (str): Target variable for encoding.
+#     n_bins (int): Number of bins for discretization.
     
-    Returns:
-    pd.DataFrame, pd.DataFrame: Transformed train and test DataFrames.
-    """
-    # Apply KBinsDiscretizer to bin 'weight_capacity'
-    bins_discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='quantile')
-    train_df['binned_weight_capacity'] = bins_discretizer.fit_transform(train_df[['weight_capacity']])
-    test_df['binned_weight_capacity'] = bins_discretizer.transform(test_df[['weight_capacity']])
+#     Returns:
+#     pd.DataFrame, pd.DataFrame: Transformed train and test DataFrames.
+#     """
+#     # Apply KBinsDiscretizer to bin 'weight_capacity'
+#     bins_discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='quantile')
+#     train_df['binned_weight_capacity'] = bins_discretizer.fit_transform(train_df[['weight_capacity']])
+#     test_df['binned_weight_capacity'] = bins_discretizer.transform(test_df[['weight_capacity']])
 
-    # Apply TargetEncoder to encode the binned values based on the target_column
-    target_encoder = TargetEncoder(target_type="continuous")
-    train_df['encoded_weight_capacity'] = target_encoder.fit_transform(train_df[['binned_weight_capacity']], train_df[target])
-    test_df['encoded_weight_capacity'] = target_encoder.transform(test_df[['binned_weight_capacity']])
+#     # Apply TargetEncoder to encode the binned values based on the target_column
+#     target_encoder = TargetEncoder(target_type="continuous")
+#     train_df['encoded_weight_capacity'] = target_encoder.fit_transform(train_df[['binned_weight_capacity']], train_df[target])
+#     test_df['encoded_weight_capacity'] = target_encoder.transform(test_df[['binned_weight_capacity']])
     
-    return train_df, test_df
+#     return train_df, test_df
 
 
 def target_encoding(
@@ -98,7 +99,7 @@ def target_encoding(
     # --- Encode each individual categorical column with TargetEncoder ---
     for col in cat_cols:
         # Initialize a fresh TargetEncoder for each column
-        te = TargetEncoder(target_type="continuous")  
+        te = TargetEncoder(target_type="continuous")
         
         # Fit on the training data
         train_encoded = te.fit_transform(train_df[[col]], train_df[target])

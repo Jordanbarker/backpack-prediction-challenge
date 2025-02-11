@@ -2,7 +2,8 @@ target = 'price'
 
 baseline_features = ['weight_capacity', 'color', 'compartments', 'brand', 'material', 'is_waterproof']
 
-cat_cols = ['brand', 'material', 'size', 'compartments', 'style', 'color', 'laptop_compartment', 'is_waterproof', 'weight_capacity_int']
+cat_cols = ['brand', 'material', 'size', 'compartments', 'style', 'color', 'laptop_compartment', 'is_waterproof']
+#, 'weight_capacity_int']
 
 
 feature_list = [
