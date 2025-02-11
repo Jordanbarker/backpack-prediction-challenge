@@ -37,17 +37,24 @@ feature_list = [
     'style_weight_capacity_int_encoded',
     'material_laptop_compartment_encoded', 
     'color_is_waterproof_encoded',
-]
+# ]
 
-unused = [
+# unused = [
     'material_style_encoded',
     'laptop_compartment_weight_capacity_int_encoded',
     'weight_capacity_size', 'style_color_encoded',
-    'brand_laptop_compartment_encoded', 'color_laptop_compartment_encoded',
-    'style_encoded', 'brand_is_waterproof_encoded', 'size_style_encoded',
-    'weight_capacity_int_encoded', 'brand_encoded',
-    'laptop_compartment_encoded', 'compartments_encoded',
-    'encoded_weight_capacity', 'color', 'material_encoded', 
+    'brand_laptop_compartment_encoded', 
+    'color_laptop_compartment_encoded',
+    'style_encoded', 
+    'brand_is_waterproof_encoded', 
+    'size_style_encoded',
+    'weight_capacity_int_encoded', 
+    'brand_encoded',
+    'laptop_compartment_encoded',
+    'compartments_encoded',
+    'encoded_weight_capacity', 
+    'color', 
+    'material_encoded', 
     'color_encoded',
     'is_waterproof_encoded', 
     'size_encoded', 

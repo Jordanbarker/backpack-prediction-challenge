@@ -31,7 +31,9 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
         columns.append('price')
     
     df.columns = columns
-    df = df.drop(columns='id')
+    
+    if is_train:
+        df = df.drop(columns='id')
     
     # Define the mapping for Size conversion
     size_mapping = {"Small": 1, "Medium": 2, "Large": 3}
