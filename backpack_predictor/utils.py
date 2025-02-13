@@ -10,7 +10,7 @@ from sklearn.preprocessing import KBinsDiscretizer, TargetEncoder
 def prepare_data(df: pd.DataFrame, is_train: bool = True):
     """
     Prepares the dataset for training or testing by renaming columns, handling missing values,
-    converting categorical and numerical features, and creating new features.
+    converting categorical and numerical features.
     
     Args:
         df (pd.DataFrame): The input dataframe (train or test).
@@ -20,7 +20,7 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
         pd.DataFrame: The processed dataframe.
     """
     
-    # Define the column names
+    # Rename columns
     columns = [
         'id', 'brand', 'material', 'size', 'compartments', 
         'laptop_compartment', 'is_waterproof', 'style', 'color', 
@@ -33,28 +33,34 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
     df.columns = columns
     
     if is_train:
+        # Keep the id column on the test set since it's used for the submission
         df = df.drop(columns='id')
-    
-    # Define the mapping for Size conversion
+
+    # Convert categories to int
     size_mapping = {"Small": 0, "Medium": 1, "Large": 2}
-    # df["size_int"] = df["size"].map(size_mapping).fillna(0).astype(int)
-    df["size"] = df["size"].map(size_mapping).fillna(-1)
+    df["size"] = df["size"].map(size_mapping).fillna(-1).astype(int)
+
+    brand_mapping = {"Adidas": 0, "Puma": 1, "Nike": 2, "Jansport": 3, "Under Armour": 4}
+    df["brand"] = df["brand"].map(brand_mapping).fillna(-1).astype(int)
+
+    material_mapping = {"Leather": 0, "Nylon": 1, "Polyester": 2, "Canvas": 3}
+    df["material"] = df["material"].map(material_mapping).fillna(-1).astype(int)
+
+    style_mapping = {"Backpack": 0, "Messenger": 1, "Tote": 2}
+    df["style"] = df["style"].map(style_mapping).fillna(-1).astype(int)
+
+    color_mapping = {"Black": 0, "Gray": 1, "Red": 2, "Pink": 3, "Green": 4, "Blue": 5}
+    df["color"] = df["color"].map(color_mapping).fillna(-1).astype(int)
+
+    binary_mapping = {"No": 0, "Yes": 1}
+    df["laptop_compartment"] = df["laptop_compartment"].map(binary_mapping).fillna(-1).astype(int)
+    df["is_waterproof"] = df["is_waterproof"].map(binary_mapping).fillna(-1).astype(int)
     
-    # Handle weight capacity
-    df['weight_capacity'] = df['weight_capacity'].fillna(0)
-    # df['weight_capacity_int'] = df['weight_capacity'].astype(int)
-    # df['weight_capacity_size'] = df['weight_capacity'] * df['size_int']
-    
-    # Convert categorical columns
-    df['compartments'] = df['compartments'].astype('category')
-    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    df[cat_cols] = df[cat_cols].astype('category')
-    
-    # Convert boolean columns to integer type
-    df['laptop_compartment'] = df['laptop_compartment'].cat.codes.fillna(-1).astype(int)
-    df['is_waterproof'] = df['is_waterproof'].cat.codes.fillna(-1).astype(int)
+    df['weight_capacity'] = df['weight_capacity'].fillna(-1)
+    df['compartments'] = df['compartments'].astype(int)
     
     return df
+
 
 
 # def preprocess_weight_capacity(train_df, test_df, n_bins=5, target=target):
