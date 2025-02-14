@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "backpack_predictor"
-version = "0.1"
+version = "0.1.0"
 description = "Kaggle S5E2"
 authors = [
     { name = "Jordan Barker" }
@@ -13,6 +13,7 @@ license = { text = "MIT" }
 readme = "README.md"
 keywords = ["python", "kaggle", "data", "science"]
 dependencies = [
+    "ipykernel",
     "numpy",
     "pandas",
     "seaborn",
@@ -20,9 +21,14 @@ dependencies = [
     "scipy", 
     "scikit-learn",
     "optuna", 
+    "optuna-dashboard",
     "lightgbm", 
+    "optuna-integration[lightgbm]",
     "xgboost", 
-    "catboost"
+    "optuna-integration[xgboost]",
+    "catboost",
+    "shap",
+    "autogluon"
 ]
 requires-python = ">=3.9"
 
