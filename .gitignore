@@ -5,3 +5,4 @@
 /backpack_predictor/__pycache__
 /backpack_predictor.egg-info
 .DS_Store
+/notebooks/AutogluonModels
