@@ -6,6 +6,14 @@ from .features import target
 
 from sklearn.preprocessing import KBinsDiscretizer, TargetEncoder
 
+def count_decimal_places(value):
+    if pd.isna(value):  # Handle NaN values
+        return None
+    value_str = str(value)
+    if '.' in value_str:
+        return len(value_str.split('.')[1])
+    return 0
+
 
 def prepare_data(df: pd.DataFrame, is_train: bool = True):
     """
@@ -58,6 +66,10 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
     
     df['weight_capacity'] = df['weight_capacity'].fillna(-1)
     df['compartments'] = df['compartments'].astype(int)
+
+    df['wc_decimal_count'] = df['weight_capacity'].apply(count_decimal_places)
+    # Replace 2-13 since there was little to no signal
+    df.loc[(df['wc_decimal_count'] > 1) & (df['wc_decimal_count'] < 14), 'wc_decimal_count'] = -1
     
     return df
 

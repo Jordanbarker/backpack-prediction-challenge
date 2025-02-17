@@ -9,8 +9,13 @@ common_xgb_params = {
 xgb_params_0 = {'colsample_bylevel': 0.6749490938559761, 'colsample_bytree': 0.9790694501766262, 'learning_rate': 0.11559290622818262, 'max_depth': 6, 'min_child_weight': 12, 'gamma': 0.8382681285208085, 'subsample': 0.5874192575935778, 'reg_alpha': 3.3622771363878876e-05, 'reg_lambda': 3.141420086780599e-06}
 xgb_params_1 = {'colsample_bylevel': 0.5210471720222337, 'colsample_bytree': 0.9558753657785292, 'learning_rate': 0.21268822566819126, 'max_depth': 6, 'min_child_weight': 30, 'gamma': 0.7323111677091081, 'subsample': 0.7482950178956017, 'reg_alpha': 6.266062113483953e-05, 'reg_lambda': 0.15641348826123197}
 
-# 38.66765
-# 20 early stopping rounds
+# 38.66
+xgb_params_2 = {'colsample_bylevel': 0.5855818440243894, 'colsample_bytree': 0.6608307328204897, 'learning_rate': 0.004490371142580223, 'max_depth': 8, 'min_child_weight': 14, 'gamma': 0.6076023861910245, 'subsample': 0.2778865610345461, 'reg_alpha': 0.033705063323414546, 'reg_lambda': 0.00010482019100779534, 'early_stopping_rounds': 420, 'num_boost_round': 3739}
+
+# 38.661
+xgb_params_3 = {'colsample_bylevel': 0.9387587145081213, 'colsample_bytree': 0.6506691909264717, 'learning_rate': 0.0850463496255034, 'max_depth': 6, 'min_child_weight': 35, 'gamma': 0.6729529635650856, 'subsample': 0.7799353562727942, 'reg_alpha': 0.0007769752893030054, 'reg_lambda': 0.00013696944943227977}
+
+# 38.66765 with 20 early stopping rounds
 catboost_params_0 = {
     'learning_rate': 0.06531304678858534,
     'iterations': 3649,
