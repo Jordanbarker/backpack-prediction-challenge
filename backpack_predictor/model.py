@@ -8,6 +8,7 @@ from sklearn.linear_model import ElasticNetCV
 
 import xgboost as xgb
 import lightgbm as lgb
+from catboost import CatBoostRegressor
 
 from loguru import logger
 
@@ -20,7 +21,7 @@ def check_model_dicts(model_dict: Dict[str, Dict[str, Any]]) -> None:
         raise TypeError("ERROR: model_dict must be a dictionary with string keys and dictionary values.")
 
     required_keys = ['type', 'params', 'features']
-    valid_model_types = ['xgb', 'lgb', 'elastic_net']
+    valid_model_types = ['xgb', 'lgb', 'catboost', 'elastic_net']
 
     for model_name, model_config in model_dict.items():
         if not isinstance(model_name, str):
@@ -80,8 +81,7 @@ def create_splits(
 
 def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                   data_splits: List[Tuple[pd.DataFrame, pd.DataFrame]],
-                  target: str,
-                  xgb_random_state: int = 42) -> pd.DataFrame:
+                  target: str) -> pd.DataFrame:
     """
     Trains models defined in model_dict using cross-validation splits,
     logs out performance, and returns the concatenated validation folds
@@ -90,7 +90,6 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
     :param model_dict: dictionary specifying models, their parameters, and features
     :param data_splits: list of (train_fold, val_fold) pairs
     :param target: name of the target column
-    :param xgb_random_state: random seed for XGB reproducibility
     :return: DataFrame containing validation folds with predictions
     """
     check_model_dicts(model_dict)
@@ -107,6 +106,9 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
             params = model_conf['params']
             features = model_conf['features']
             
+            ######################
+            # XGBoost
+            ######################            
             if model_type == 'xgb':
                 dtrain_fold = (
                     xgb.DMatrix(train_fold[features], 
@@ -118,14 +120,46 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                                 label=val_fold[target], 
                                 enable_categorical=True)
                 )
-                bst = xgb.train(
+                model = xgb.train(
                     params=params,
                     dtrain=dtrain_fold,
                     evals=[(dtrain_fold, "train"), (dvalid_fold, "validation_0")],
                     verbose_eval=False,
                 )
-                val_fold[model_name] = bst.predict(dvalid_fold)
-                rmse = root_mean_squared_error(val_fold[model_name], val_fold[target])
+                val_fold[model_name] = model.predict(dvalid_fold)
+
+            ######################
+            # LightGBM
+            ######################    
+            elif model_type == 'lgb':
+                train_data = lgb.Dataset(train_fold[features], label=train_fold[target])
+                valid_data = lgb.Dataset(val_fold[features], label=val_fold[target], reference=train_data)
+            
+                model = lgb.train(
+                    params=params,
+                    train_set=train_data,
+                    valid_sets=[train_data, valid_data],
+                    valid_names=['train_0', 'valid_0'],
+                )
+                val_fold[model_name] = model.predict(val_fold[features], num_iteration=model.best_iteration)
+
+            ######################
+            # Catboost
+            ######################
+            elif model_type == 'catboost':
+                model = CatBoostRegressor(**params)
+                model.fit(
+                    train_fold[features], 
+                    train_fold[target],
+                    eval_set=[(val_fold[features], val_fold[target])],
+                    early_stopping_rounds=50, # TODO 
+                    use_best_model=True
+                )
+                val_fold[model_name] = model.predict(val_fold[features])
+
+            ######################
+            # ElasticNet
+            ######################
             elif model_type == 'elastic_net':
                 clf = ElasticNetCV(
                     alphas=[1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0],
@@ -133,9 +167,7 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                     cv=5,
                     n_jobs=-1,
                 ).fit(train_fold[features], train_fold[target])
-
                 val_fold[model_name] = clf.predict(val_fold[features])
-                rmse = root_mean_squared_error(val_fold[model_name], val_fold[target])
 
                 logger.debug(f"[{i}] ElasticNet alpha: {clf.alpha_}")
                 logger.debug(f"[{i}] ElasticNet l1 ratio: {clf.l1_ratio_}")
@@ -143,7 +175,7 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
             else:
                 raise ValueError(f"Model type '{model_type}' is not implemented in the training loop.")
 
-            
+            rmse = root_mean_squared_error(val_fold[model_name], val_fold[target])
             if rmse < best_rmse:
                 best_rmse = rmse
                 best_model = model_name
