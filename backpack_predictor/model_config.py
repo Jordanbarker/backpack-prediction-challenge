@@ -33,6 +33,11 @@ common_lgb_params = {
     'force_row_wise': True,
 }
 
+# 38.655
+lgb_params_0 = {'early_stopping_rounds': 390, 'bagging_fraction': 0.9954892076290114, 'bagging_freq': 3, 'cat_l2': 19.943225836972967, 'extra_trees': False, 'feature_fraction': 0.9583014726425529, 'learning_rate': 0.21124741547142464, 'max_bin': 7566, 'max_depth': 648, 'min_samples_leaf': 14, 'n_estimators': 1570, 'num_leaves': 68, 'lambda_l1': 7.772617123196223e-06, 'lambda_l2': 0.0006810978623249646}
+# 38.653 - converted cols to cats, dropped 'laptop_compartment', 'is_waterproof'
+lgb_params_1 = {'early_stopping_rounds': 916, 'cat_l2': 40.57932515907615, 'extra_trees': False, 'feature_fraction': 0.9028265875188044, 'learning_rate': 0.02133798565133846, 'max_bin': 7449, 'max_depth': 590, 'min_samples_leaf': 22, 'n_estimators': 14706, 'num_leaves': 141, 'lambda_l1': 0.004931837373939155, 'lambda_l2': 2.1647829905701264e-06}
+
 l1_models = {
     'xgb_l1_0': {
         'type': 'xgb',
