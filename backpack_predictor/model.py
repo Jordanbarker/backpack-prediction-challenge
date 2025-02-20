@@ -176,6 +176,7 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                 raise ValueError(f"Model type '{model_type}' is not implemented in the training loop.")
 
             rmse = root_mean_squared_error(val_fold[model_name], val_fold[target])
+            logger.debug(f"[{i}] RMSE: {rmse:.3f} ({model_name})")
             if rmse < best_rmse:
                 best_rmse = rmse
                 best_model = model_name
