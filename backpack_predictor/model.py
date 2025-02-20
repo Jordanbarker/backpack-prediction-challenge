@@ -185,7 +185,7 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
         avg_pred = val_fold[model_keys].mean(axis=1)
         avg_rmse = root_mean_squared_error(avg_pred, val_fold[target])
         if avg_rmse > best_rmse:
-            logger.debug(f"[{i}] Single model outperformed the average.")
+            logger.debug(f"[{i}] [!!!] Single model outperformed the average.")
 
         logger.info(f"[{i}] Average RMSE: {avg_rmse:.4f} Best model ({best_model}): {best_rmse:.4f}")
         rmse_list.append(avg_rmse)
