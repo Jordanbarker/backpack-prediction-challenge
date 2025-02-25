@@ -65,11 +65,11 @@ def prepare_data(df: pd.DataFrame, is_train: bool = True):
     df["is_waterproof"] = df["is_waterproof"].map(binary_mapping).fillna(-1).astype(int)
     
     df['weight_capacity'] = df['weight_capacity'].fillna(-1)
-    df['compartments'] = df['compartments'].astype(int)
+    df['compartments'] = df['compartments'].fillna(-1).astype(int)
 
-    df['wc_decimal_count'] = df['weight_capacity'].apply(count_decimal_places)
+    # df['wc_decimal_count'] = df['weight_capacity'].apply(count_decimal_places)
     # Replace 2-13 since there was little to no signal
-    df.loc[(df['wc_decimal_count'] > 1) & (df['wc_decimal_count'] < 14), 'wc_decimal_count'] = -1
+    # df.loc[(df['wc_decimal_count'] > 1) & (df['wc_decimal_count'] < 14), 'wc_decimal_count'] = -1
     
     return df
 

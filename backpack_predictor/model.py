@@ -41,7 +41,7 @@ def check_model_dicts(model_dict: Dict[str, Dict[str, Any]]) -> None:
                 f"Expected one of {valid_model_types}."
             )
         
-    logger.info(f'Passed checks for model_dict: {model_dict}')
+    logger.info(f'Passed checks for model_dict.')
 
 
 def create_splits(
@@ -79,6 +79,161 @@ def create_splits(
     return data_splits
 
 
+def fit_model(model_conf, train_fold, val_fold, target):
+    model_type = model_conf['type']
+    params = model_conf['params']
+    features = model_conf['features']
+
+    if model_type == 'xgb':
+        dtrain = xgb.DMatrix(train_fold[features],
+                             label=train_fold[target],
+                             enable_categorical=True)
+        dvalid = xgb.DMatrix(val_fold[features],
+                             label=val_fold[target],
+                             enable_categorical=True)
+        model = xgb.train(
+            params=params,
+            dtrain=dtrain,
+            evals=[(dtrain, "train"), (dvalid, "validation")],
+            verbose_eval=False,
+        )
+        return model
+
+    elif model_type == 'lgb':
+        train_data = lgb.Dataset(train_fold[features], label=train_fold[target])
+        valid_data = lgb.Dataset(val_fold[features], label=val_fold[target], reference=train_data)
+        model = lgb.train(
+            params=params,
+            train_set=train_data,
+            valid_sets=[train_data, valid_data],
+            valid_names=['train', 'valid'],
+        )
+        return model
+
+    elif model_type == 'catboost':
+        model = CatBoostRegressor(**params)
+        model.fit(
+            train_fold[features],
+            train_fold[target],
+            eval_set=[(val_fold[features], val_fold[target])],
+            early_stopping_rounds=50, # TODO
+            use_best_model=True,
+            verbose=False
+        )
+        return model
+
+    elif model_type == 'elastic_net':
+        model = ElasticNetCV(
+            alphas=[1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0],
+            l1_ratio=np.arange(0.01, 1, 0.01),
+            cv=5,
+            n_jobs=-1,
+        )
+        model.fit(train_fold[features], train_fold[target])
+        return model
+
+    else:
+        raise ValueError(f"Model type '{model_type}' is not implemented in the training loop.")
+
+
+def predict_model(model, model_conf, val_fold):
+    features = model_conf['features']
+    model_type = model_conf['type']
+
+    if model_type == 'xgb':
+        dvalid = xgb.DMatrix(val_fold[features], enable_categorical=True)
+        preds = model.predict(dvalid)
+
+    elif model_type == 'lgb':
+        preds = model.predict(val_fold[features], num_iteration=model.best_iteration)
+
+    elif model_type == 'catboost':
+        preds = model.predict(val_fold[features])
+    
+    elif model_type == 'elastic_net':
+        preds = model.predict(val_fold[features])
+    
+    else:
+        raise ValueError(f"Model type '{model_type}' is not implemented in the prediction loop.")
+    
+    return preds
+    
+def fit_predict_model(model_conf, model_name, train_fold, val_fold, target):
+    model_type = model_conf['type']
+    params = model_conf['params']
+    features = model_conf['features']
+
+    ######################
+    # XGBoost
+    ######################            
+    if model_type == 'xgb':
+        dtrain_fold = (
+            xgb.DMatrix(train_fold[features], 
+                        label=train_fold[target], 
+                        enable_categorical=True)
+        )
+        dvalid_fold = (
+            xgb.DMatrix(val_fold[features], 
+                        label=val_fold[target], 
+                        enable_categorical=True)
+        )
+        model = xgb.train(
+            params=params,
+            dtrain=dtrain_fold,
+            evals=[(dtrain_fold, "train"), (dvalid_fold, "validation")],
+            verbose_eval=False,
+        )
+        val_fold[model_name] = model.predict(dvalid_fold)
+
+    ######################
+    # LightGBM
+    ######################
+    elif model_type == 'lgb':
+        train_data = lgb.Dataset(train_fold[features], label=train_fold[target])
+        valid_data = lgb.Dataset(val_fold[features], label=val_fold[target], reference=train_data)
+    
+        model = lgb.train(
+            params=params,
+            train_set=train_data,
+            valid_sets=[train_data, valid_data],
+            valid_names=['train', 'valid'],
+        )
+        val_fold[model_name] = model.predict(val_fold[features], num_iteration=model.best_iteration)
+
+    ######################
+    # Catboost
+    ######################
+    elif model_type == 'catboost':
+        model = CatBoostRegressor(**params)
+        model.fit(
+            train_fold[features], 
+            train_fold[target],
+            eval_set=[(val_fold[features], val_fold[target])],
+            early_stopping_rounds=50, # TODO 
+            use_best_model=True
+        )
+        val_fold[model_name] = model.predict(val_fold[features])
+
+    ######################
+    # ElasticNet
+    ######################
+    elif model_type == 'elastic_net':
+        model = ElasticNetCV(
+            alphas=[1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0],
+            l1_ratio=np.arange(0.01, 1, 0.01),
+            cv=5,
+            n_jobs=-1,
+        ).fit(train_fold[features], train_fold[target])
+        val_fold[model_name] = model.predict(val_fold[features])
+        # logger.debug(f"[{i}] ElasticNet alpha: {clf.alpha_}")
+        # logger.debug(f"[{i}] ElasticNet l1 ratio: {clf.l1_ratio_}")
+        # logger.debug(f"[{i}] ElasticNet coefs: {clf.coef_}")
+    else:
+        raise ValueError(f"Model type '{model_type}' is not implemented in the training loop.")
+    
+    return model
+
+
 def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                   data_splits: List[Tuple[pd.DataFrame, pd.DataFrame]],
                   target: str) -> pd.DataFrame:
@@ -97,83 +252,14 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
     model_keys = list(model_dict.keys())
     rmse_list = []
 
-    logger.info(f'Starting train / eval CV loop for model_dict: {model_dict}')
+    logger.info(f'Starting CV loop for model_dict.')
     for i, (train_fold, val_fold) in enumerate(data_splits, 1):
         best_rmse = float('inf')
 
         for model_name, model_conf in model_dict.items():
-            model_type = model_conf['type']
-            params = model_conf['params']
-            features = model_conf['features']
-            
-            ######################
-            # XGBoost
-            ######################            
-            if model_type == 'xgb':
-                dtrain_fold = (
-                    xgb.DMatrix(train_fold[features], 
-                                label=train_fold[target], 
-                                enable_categorical=True)
-                )
-                dvalid_fold = (
-                    xgb.DMatrix(val_fold[features], 
-                                label=val_fold[target], 
-                                enable_categorical=True)
-                )
-                model = xgb.train(
-                    params=params,
-                    dtrain=dtrain_fold,
-                    evals=[(dtrain_fold, "train"), (dvalid_fold, "validation_0")],
-                    verbose_eval=False,
-                )
-                val_fold[model_name] = model.predict(dvalid_fold)
-
-            ######################
-            # LightGBM
-            ######################    
-            elif model_type == 'lgb':
-                train_data = lgb.Dataset(train_fold[features], label=train_fold[target])
-                valid_data = lgb.Dataset(val_fold[features], label=val_fold[target], reference=train_data)
-            
-                model = lgb.train(
-                    params=params,
-                    train_set=train_data,
-                    valid_sets=[train_data, valid_data],
-                    valid_names=['train_0', 'valid_0'],
-                )
-                val_fold[model_name] = model.predict(val_fold[features], num_iteration=model.best_iteration)
-
-            ######################
-            # Catboost
-            ######################
-            elif model_type == 'catboost':
-                model = CatBoostRegressor(**params)
-                model.fit(
-                    train_fold[features], 
-                    train_fold[target],
-                    eval_set=[(val_fold[features], val_fold[target])],
-                    early_stopping_rounds=50, # TODO 
-                    use_best_model=True
-                )
-                val_fold[model_name] = model.predict(val_fold[features])
-
-            ######################
-            # ElasticNet
-            ######################
-            elif model_type == 'elastic_net':
-                clf = ElasticNetCV(
-                    alphas=[1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0],
-                    l1_ratio=np.arange(0.01, 1, 0.01),
-                    cv=5,
-                    n_jobs=-1,
-                ).fit(train_fold[features], train_fold[target])
-                val_fold[model_name] = clf.predict(val_fold[features])
-
-                logger.debug(f"[{i}] ElasticNet alpha: {clf.alpha_}")
-                logger.debug(f"[{i}] ElasticNet l1 ratio: {clf.l1_ratio_}")
-                logger.debug(f"[{i}] ElasticNet coefs: {clf.coef_}")
-            else:
-                raise ValueError(f"Model type '{model_type}' is not implemented in the training loop.")
+            # model = fit_predict_model(model_conf, model_name, train_fold, val_fold, target)
+            model = fit_model(model_conf, train_fold, val_fold, target)
+            val_fold[model_name] = predict_model(model, model_conf, val_fold)
 
             rmse = root_mean_squared_error(val_fold[model_name], val_fold[target])
             logger.debug(f"[{i}] RMSE: {rmse:.3f} ({model_name})")
@@ -181,13 +267,19 @@ def train_eval_cv(model_dict: Dict[str, Dict[str, Any]],
                 best_rmse = rmse
                 best_model = model_name
 
+        # Save the fitted model into model_dict for later use. 
+        if i == 1:
+            model_dict[model_name]['fit_model'] = model
 
         avg_pred = val_fold[model_keys].mean(axis=1)
         avg_rmse = root_mean_squared_error(avg_pred, val_fold[target])
-        if avg_rmse > best_rmse:
-            logger.debug(f"[{i}] [!!!] Single model outperformed the average.")
 
-        logger.info(f"[{i}] Average RMSE: {avg_rmse:.4f} Best model ({best_model}): {best_rmse:.4f}")
+        if avg_rmse > best_rmse:
+            logger.warning(f"[{i}] Single model outperformed the average.")
+        
+        logger.info(f"[{i}] RMSE: {avg_rmse:.3f} (Average model)")
+        logger.info(f"[{i}] RMSE: {best_rmse:.3f} (Best single model: {best_model})")
+
         rmse_list.append(avg_rmse)
 
     logger.info(f"Average RMSE across all folds: {np.mean(rmse_list):.4f}")
